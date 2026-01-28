@@ -6,8 +6,8 @@ from concurrent_log_handler import ConcurrentRotatingFileHandler
 import functools
 import uuid
 import inspect
-from utils.info_system import get_user
 from config.paths import LOG_PATH, LOG_DIR
+import getpass
 
 class ContextFilter(logging.Filter):
     """
@@ -122,3 +122,14 @@ def log_with_context(job=None, logger=None):
                 raise
         return wrapper
     return decorator
+
+def get_user():
+    """
+    Retorna o namo do sistema operacional
+    """
+
+    user = os.getenv('USERNAME') or os.getenv("USER")
+    if not user:
+        # fallback para casos especificos
+        user = getpass.getuser()
+    return user
