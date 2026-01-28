@@ -16,4 +16,4 @@ def init_browser(download_dir: str | Path):
     Path da pasta de download que será configurada no browser
     """
 
-    headless = os.getenc
+    headless = os.getenv('CHROME_HEADLESS', 'false').lower() == 'true'
