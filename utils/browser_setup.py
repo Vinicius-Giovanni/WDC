@@ -17,3 +17,22 @@ def init_browser(download_dir: str | Path):
     """
 
     headless = os.getenv('CHROME_HEADLESS', 'false').lower() == 'true'
+
+    user_data_dir = tempfile.mkdtemp(prefix=f'chrome_profile_{uuid.uuid4()}')
+
+    playwright = sync_playwright().start()
+
+    context = playwright.chromium.launch_persistent_context(
+        user_data_dir=user_data_dir,
+        headless=headless,
+        accept_download=True,
+        downloads_path=str(download_dir),
+        args=[
+            '--start-maximized',
+            '--disable-popup-blocking',
+            '--disable-extensions',
+            '--no-sandbox',
+            '--disable-gpu',
+            '--disable-dev-shm-usage'
+        ]
+    )
