@@ -16,8 +16,16 @@ from collections.abc import Callable
 
 # Regras de classificação de setor =======================================================
 
-@dataclass(frozen=True) # <-- @dataclass é um decorator que cria __init__, __repr__ e __aq__, ou seja, escreve o construtor
+@dataclass(frozen=True) # <-- @dataclass é um decorator que cria __init__, __repr__ e __aq__, ou seja, escreve o construtor & frozen=True torna a classe imutável
 class SetorRule:
+    """
+    Classe que descreve cada setor a partir das colunas dos relatórios de picking, cancelados e status olpn
+
+    params:
+    nome: str | Nome do setor que será retornado após as aplicações das regras
+    tipos_pedido: Iterable[str] | Lista de tipos de pedidos que será considerado na regra
+    box_range: Optional[tuple[int, int]] = None | Parâmetro opcional, lista a faixa de BOX's que serão considerados na regra 
+    """
     nome: str
     tipos_pedido: Iterable[str]
     box_range: Optional[tuple[int, int]] = None # <-- Optional torna o parâmetro opcional, podendo ou não declarar ele
@@ -138,19 +146,35 @@ def apply_setor_rules(
         default: str = 'Outras Saidas'
 ) -> pd.Series:
     
-    box = pd.to_numeric(df['box'], errors='coerce').fillna(-1).astype(int)
-    tipo = df['tipo_de_pedido']
+    """
+    Aplicação das regras, recebe DataFrame e retorna uma Series com os resultados das regras 
 
-    resultado = pd.Series(default, index=df.index, dtype='string')
+    params:
+    df: pd.DataFrame | Recebe um df, para aplicar as regras da classe SetorRule
+    rules: list[SetorRule] | Recebe um objeto 'SetorRule', lista de condições e regras
+    default: str | Retorna 'Outras Saidas' para casos fora do escopo das condições aplicadas em SETOR_RULES
+    
+    """
+    
+    box = pd.to_numeric(df['box'], errors='coerce').fillna(-1).astype(int) # <-- Normalização dos dados, to_numeric tenta converter para n, se falhar retorna NaN, boxes inv retorna -1, astype(int) garante tipo int
+    tipo = df['tipo_de_pedido'] # <-- Captura os tipos de pedidos, vira uma Series para comparar com rule.tipos_pedido
 
-    for rule in rules:
+    resultado = pd.Series(default, index=df.index, dtype='string') # <-- Serie onde todas as linhas retornar 'Outras Saidas', até que se enquadre em alguma condição
+
+    for rule in rules: # < -- aplicas as regras na order (especificas 1º, genericas 2º)
+
+        """
+        'mascara booleana'
+        True -> tipo de pedido bate com as condicoes
+        False -> tipo de pedido nao bate com as condicoes
+        """
         mask = tipo.isin(rule.tipos_pedido)
 
         if rule.box_range:
             ini, fim = rule.box_range
             mask &= box.between(ini, fim)
 
-        resultado[mask & (resultado == default)] = rule.nome
+        resultado[mask & (resultado == default)] = rule.nome # <-- Condições não se sobrescrevem, a 1º condição a bater será definida
     
     return resultado
 
@@ -158,8 +182,16 @@ def apply_setor_rules(
 
 @dataclass(frozen=True)
 class SLARule:
+    """
+    Classe que descreve cada regra de SLA (Fora do Prazo ou No Prazo)
+
+    params:
+    box_range: tuple[int, int] | Lista a baixa de BOX's que serão considerados na regra
+    deadlie_fn: Callable | Recebe função de enriquecimento de dados
+    """
+
     box_range: tuple[int, int]
-    deadlie_fn: Callable
+    deadline_fn: Callable
 
 SLA_RULES = [
     SLARule(
@@ -183,14 +215,14 @@ SLA_RULES = [
 ]
 
 def check_dedline(df: pd.DataFrame) -> pd.Series:
-    base_date = df['data_locacao_pedido']
+    base_date = df['data_locacao_pedido'] # <-- Captura os dados da coluna
     update = df['data_hora_ultimo_update_olpn']
 
-    resultado = pd.Series('', index=df.index, dtype='string')
+    resultado = pd.Series('', index=df.index, dtype='string') # <-- Inicia a coluna inteira em ' ', 
 
     mask_base = (df['status_olpn'] == 'Shipped') & base_date.notna()
 
-    box = pd.to_numeric(df['box'], errors='coerce').fillna(-1).astype(int)
+    box = pd.to_numeric(df['box'], errors='coerce').fillna(-1).astype(int) # <-- Normalização dos dados, to_numeric tenta converter para n, se falhar retorna NaN, boxes inv retorna -1, astype(int) garante tipo int
 
     for rule in SLA_RULES:
         ini, fim = rule.box_range
