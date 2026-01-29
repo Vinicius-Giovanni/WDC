@@ -8,7 +8,7 @@ df['setor'] = apply_setor_rules(df, SETOR_RULES)
 """
 
 from dataclasses import dataclass
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, Optional, Tuples
 import pandas as pd
 import numbers as np
 from collections.abc import Callable
@@ -16,11 +16,11 @@ from collections.abc import Callable
 
 # Regras de classificação de setor =======================================================
 
-@dataclass(frozen=True)
+@dataclass(frozen=True) # <-- @dataclass é um decorator que cria __init__, __repr__ e __aq__, ou seja, escreve o construtor
 class SetorRule:
     nome: str
     tipos_pedido: Iterable[str]
-    box_range: Optional[Tuple[int, int]] = None
+    box_range: Optional[tuple[int, int]] = None # <-- Optional torna o parâmetro opcional, podendo ou não declarar ele
 
 SETOR_RULES = [
     SetorRule(
