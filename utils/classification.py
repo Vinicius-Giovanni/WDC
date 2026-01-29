@@ -2,11 +2,18 @@
 Tratativas e lógicas avançadas de enriquecimentos de dados
 
 Classes e funções:
+
+apply_setor_rules(): aplica as regras de negocio na coluna tipos_de_pedido. Como usar:
+df['setor'] = apply_setor_rules(df, SETOR_RULES)
 """
 
 from dataclasses import dataclass
 from typing import Iterable, Optional, Tuple
 import pandas as pd
+from collections.abc import Callable
+
+
+# Regras de classificação de setor =======================================================
 
 @dataclass(frozen=True)
 class SetorRule:
@@ -92,6 +99,70 @@ SETOR_RULES = [
 
     SetorRule(
         nome='Ribeirao Preto + Uberlandia',
-        tipos_pedido=[],
+        tipos_pedido=[
+            'S01 - ENTREGA A CLIENTES',
+            'S02 - RETIRA CLIENTE DEPOSITO'
+        ],
+    ),
+
+    SetorRule(
+        nome='Balanco',
+        tipos_pedido=['S53 - TRANSFERENCIA ENTRE CDS'],
+    ),
+
+    SetorRule(
+        nome='EAD',
+        tipos_pedido=[
+            'S05 - TRANSF EAD PROGRAMADA',
+            'S04 - TRANSF EAD AUTOMATICA'
+        ],
+    ),
+
+    SetorRule(
+        nome='Leves',
+        tipos_pedido=[
+            'S39 - EXPEDICAO LEVES',
+            'S39M - EXPEDICAO LEVES',
+            'S39R - Single line',
+            'S39R - SINGLE LINE',
+            'S39P - EXPEDICAO LEVES',
+            'S39I - EXPEDICAO LEVES',
+        ],
     ),
 ]
+
+def apply_setor_rules(
+        df: pd.DataFrame,
+        rules: list[SetorRule],
+        default: str = 'Outras Saidas'
+) -> pd.Series:
+    
+    box = pd.to_numeric(df['box'], errors='coerce').fillna(-1).astype(int)
+    tipo = df['tipo_de_pedido']
+
+    resultado = pd.Series(default, index=df.index, dtype='string')
+
+    for rule in rules:
+        mask = tipo.isin(rule.tipos_pedido)
+
+        if rule.box_range:
+            ini, fim = rule.box_range
+            mask &= box.between(ini, fim)
+
+        resultado[mask & (resultado == default)] = rule.nome
+    
+    return resultado
+
+# Regras de SLA =======================================================
+
+@dataclass(frozen=True)
+class SLARule:
+    box_range: tuple[int, int]
+    deadlie_fn: Callable
+
+SLA_RULES = {
+    SLARule(
+        (413, 526),
+        lambda d: (d + pd.Timedelta(days=1)).dt.normalize() + pd.Timedelta(hours=5, minutes=30)
+    )
+}
