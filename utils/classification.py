@@ -10,6 +10,7 @@ df['setor'] = apply_setor_rules(df, SETOR_RULES)
 from dataclasses import dataclass
 from typing import Iterable, Optional, Tuple
 import pandas as pd
+import numbers as np
 from collections.abc import Callable
 
 
@@ -160,9 +161,47 @@ class SLARule:
     box_range: tuple[int, int]
     deadlie_fn: Callable
 
-SLA_RULES = {
+SLA_RULES = [
     SLARule(
         (413, 526),
         lambda d: (d + pd.Timedelta(days=1)).dt.normalize() + pd.Timedelta(hours=5, minutes=30)
-    )
-}
+    ),
+    SLARule(
+        (527, 556),
+        lambda d: (d + pd.Timedelta(days=1)).dt.normalize() + pd.Timedelta(hours=10)
+    ),
+    SLARule(
+        (331, 412),
+        lambda d: d.dt.normalize() + pd.Timedelta(hours=23, minutes=30)
+    ),
+    SLARule(
+        (557, 584),
+        lambda d: (d + pd.TImedelta(days=1)).dt.normalize() + pd.Timedelta(hours=18)
+    ),
+
+
+]
+
+def check_dedline(df: pd.DataFrame) -> pd.Series:
+    base_date = df['data_locacao_pedido']
+    update = df['data_hora_ultimo_update_olpn']
+
+    resultado = pd.Series('', index=df.index, dtype='string')
+
+    mask_base = (df['status_olpn'] == 'Shipped') & base_date.notna()
+
+    box = pd.to_numeric(df['box'], errors='coerce').fillna(-1).astype(int)
+
+    for rule in SLA_RULES:
+        ini, fim = rule.box_range
+        mask = mask_base & box.between(ini, fim)
+
+        deadline = rule.deadlie_fn(base_date)
+
+        resultado[mask] = np.where(
+            update[mask] <= deadline[mask],
+            'No prazo',
+            'Fora do prazo'
+        )
+
+    return resultado
