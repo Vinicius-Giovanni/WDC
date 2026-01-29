@@ -1,3 +1,19 @@
+"""
+Configuração geral de logger
+
+Classes e funções:
+ContextFilter(): Ingeta o nome do usuário no registro da log
+
+CustomJsonFormatter(): Formatação de asctime
+
+setup_logger(): Criação e configuração da log
+
+log_with_context(): Inserção de campos com contexto corporativo
+
+get_user(): Retorna o sistema operacional
+
+"""
+
 import os
 import logging
 import time
@@ -11,7 +27,7 @@ import getpass
 
 class ContextFilter(logging.Filter):
     """
-    Filtro que injeta o nome do usuário no regitro de log
+    Filtro que injeta o nome do usuário no registro de log
     """
 
     def __init__(self, user=None, locate=None):
@@ -125,7 +141,7 @@ def log_with_context(job=None, logger=None):
 
 def get_user():
     """
-    Retorna o namo do sistema operacional
+    Retorna o sistema operacional
     """
 
     user = os.getenv('USERNAME') or os.getenv("USER")

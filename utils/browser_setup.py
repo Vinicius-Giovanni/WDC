@@ -1,3 +1,12 @@
+"""
+Arquivo com todas as regras de configuração do navegador
+
+functions:
+init_browser(): Inicia a instância com as configurações aplicadas
+
+create_authenticated_page(): Cria uma página já autenticada via cookies
+"""
+
 from playwright.sync_api import sync_playwright
 from config.pipeline_config import LINKS
 from pathlib import Path
@@ -92,6 +101,9 @@ def create_authenticated_page(cookies: list[dict], download_dir: Path):
     return page, context, playwright
 
 def load_cookies(path='cookies.json'):
+    """
+    Carrega os cookies
+    """
     with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)
     
