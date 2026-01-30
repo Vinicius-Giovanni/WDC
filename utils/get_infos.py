@@ -17,7 +17,10 @@ def penultimate_date(
     format: str = '%d/%m/%Y'
 ) -> Optional[str]:
     """
-    Retorna a penultima data distinta do banco de dados
+    Calcula a penultima data distinta presente em uma coluna de um arquivo Parquet, utilizando processamento em streaming para minimar o uso de memória.
+
+    A função percorre o arquivo Parquet em pequenos lotes (batches), mantendo em memória apenas as duas maiores datas encontradas até o momento.
+    Nenhum conjunto completo de dados é armazenado
 
     params:
     parquet_file: Path | Recebe o path do parquet
