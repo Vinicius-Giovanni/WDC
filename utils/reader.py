@@ -9,6 +9,7 @@ from utils.config_logger import log_with_context
 from config.pipeline_config import logger
 import pyarrow as pa
 import pyarrow.parquet as pq
+from datetime import date, timedelta
 
 @log_with_context(job='move_files',logger=logger)
 def move_files(file_router: Mapping[Path | str, Path | str]) -> None:
@@ -122,4 +123,60 @@ def merge_parquet(
 
         for f in files:
             f.unlink()
+@log_with_context(job='rename_csv', logger=logger)
+def rename_csv(
+    directories: Mapping[str, Path | str],
+    reference_date: date | None = None
+) -> None:
+    """
+    Renomeia arquivos CVS adicionando a data de referência ao nome
 
+    -Operação indempotente
+    - Não sovbrescve arquivos existentes
+    - Ignora diretórios inexistentes
+
+    params:
+    directories: Mapping[str, Path | str] | Mapeia os diretórios inputados
+    reference_date: date | None = None | Permite a injeção de uma data teste
+    """
+
+    ref_date = reference_date or (date.today() - timedelta(days=1))
+    date_suffix = ref_date.strftime('%Y-%m-%d')
+
+    for dataset, dir_path in directories.items():
+        directory = Path(dir_path)
+
+        if not directory.exists():
+            logger.warning(
+                'diretorio inexistente, pulando rename'
+            )
+            continue
+
+        for file in directory.iterdir():
+            if file.suffix.lower() != '.csv':
+                continue
+
+            # Idempotência: já posui data no nome
+            if date_suffix in file.steam:
+                continue
+
+            new_name = f'{file.steam}_{date_suffix}{file.suffix}'
+            new_path = file.with_name(new_name)
+
+            if new_path.exists():
+                logger.warning(
+                    'arquivo de destino já existe, pulando rename'
+                )
+                continue
+
+            try:
+                file.rename(new_path)
+
+                logger.info(
+                    'arquivo renomeado com sucesso'
+                )
+            except Exception as exc:
+                logger.error(
+                    'erro ao renomear o arquivo'
+                )
+                
