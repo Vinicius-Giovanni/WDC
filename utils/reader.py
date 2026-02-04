@@ -3,13 +3,14 @@ File responsável pelas funções de leituras e escritas de arquivos
 """
 
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Dict
 import shutil
 from utils.config_logger import log_with_context
 from config.pipeline_config import logger
 import pyarrow as pa
 import pyarrow.parquet as pq
 from datetime import date, timedelta
+
 
 @log_with_context(job='move_files',logger=logger)
 def move_files(file_router: Mapping[Path | str, Path | str]) -> None:
@@ -123,6 +124,7 @@ def merge_parquet(
 
         for f in files:
             f.unlink()
+
 @log_with_context(job='rename_csv', logger=logger)
 def rename_csv(
     directories: Mapping[str, Path | str],
@@ -180,3 +182,13 @@ def rename_csv(
                     'erro ao renomear o arquivo'
                 )
                 
+def clear_dirs(dirs: Dict[str, any], prefix: str = '') -> None:
+    """
+    Realiza a limpeza de arquivos dos diretórios especificados, caso o diretório não existir, ele é criado.
+
+    params
+    dirs: Dict[str, any] | Recebe os diretórios em formato de dicionário
+    prefix: str = '' | Recebe o prefixo de nome
+    """
+
+    
